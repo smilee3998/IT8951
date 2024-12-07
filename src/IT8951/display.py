@@ -1,5 +1,4 @@
-
-import warnings
+from typing import Tuple, Literal, Optional
 from PIL import Image, ImageChops
 
 from .constants import DisplayModes, PixelModes, low_bpp_modes
@@ -19,7 +18,14 @@ class AutoDisplay:
     rotation---they will be swapped automatically if rotate is set to CW or CCW
     '''
 
-    def __init__(self, width, height, rotate=None, mirror=False, track_gray=False):
+    def __init__(
+        self,
+        width: int,
+        height: int,
+        rotate: Optional[Literal["CW", "CCW", "flip"]] = None,
+        mirror: bool = False,
+        track_gray: bool = False,
+    ):
         self._set_rotate(rotate, mirror)
 
         self.display_dims = (width, height)
@@ -41,14 +47,14 @@ class AutoDisplay:
             self.gray_change_bbox = None
 
     @property
-    def width(self):
+    def width(self) -> int:
         return self.frame_buf.width
 
     @property
-    def height(self):
+    def height(self) -> int:
         return self.frame_buf.height
 
-    def _get_frame_buf(self):
+    def _get_frame_buf(self) -> Image.Image:
         '''
         Return the frame buf, rotated according to flip. Always returns a copy, even
         when rotate is None.
@@ -58,7 +64,9 @@ class AutoDisplay:
 
         return self.frame_buf.transpose(self._rotate_method)
 
-    def _set_rotate(self, rotate, mirror):
+    def _set_rotate(
+        self, rotate: Optional[Literal["CW", "CCW", "flip"]], mirror: bool
+    ) -> None:
 
         if not mirror:
             methods = {
@@ -80,13 +88,13 @@ class AutoDisplay:
 
         self._rotate_method = methods[rotate]
 
-    def draw_full(self, mode):
+    def draw_full(self, mode: DisplayModes):
         '''
         Write the full image to the device, and display it using mode
         '''
         frame = self._get_frame_buf()
 
-        self.update(frame.tobytes(), (0,0), self.display_dims, mode)
+        self.update(frame.tobytes(), (0, 0), self.display_dims, mode)
 
         if self.track_gray:
             if mode == DisplayModes.DU:
@@ -97,7 +105,7 @@ class AutoDisplay:
 
         self.prev_frame = frame
 
-    def draw_partial(self, mode):
+    def draw_partial(self, mode: DisplayModes):
         '''
         Write only the rectangle bounding the pixels of the image that have changed
         since the last call to draw_full or draw_partial
@@ -133,13 +141,13 @@ class AutoDisplay:
                 img_manip.make_changes_bw(frame.crop(diff_box), buf)
 
             xy = (diff_box[0], diff_box[1])
-            dims = (diff_box[2]-diff_box[0], diff_box[3]-diff_box[1])
+            dims = (diff_box[2] - diff_box[0], diff_box[3] - diff_box[1])
 
             self.update(buf.tobytes(), xy, dims, mode)
 
         self.prev_frame = frame
 
-    def clear(self):
+    def clear(self) -> None:
         '''
         Clear display, device image buffer, and frame buffer (e.g. at startup)
         '''
@@ -208,16 +216,28 @@ class AutoEPDDisplay(AutoDisplay):
     This class initializes the EPD, and uses it to display the updates
     '''
 
-    def __init__(self, epd=None, vcom=-2.06,
-                 bus=0, device=0, spi_hz=24000000,
-                 **kwargs):
-
+    def __init__(
+        self,
+        epd: Optional[EPD] = None,
+        vcom: float = -2.06,
+        bus: int = 0,
+        device: int = 0,
+        spi_hz: int = 24000000,
+        **kwargs,
+    ):
         epd = EPD(vcom=vcom, bus=bus, device=device, data_hz=spi_hz)
 
         self.epd = epd
         AutoDisplay.__init__(self, self.epd.width, self.epd.height, **kwargs)
 
-    def update(self, data, xy, dims, mode, pixel_format=PixelModes.M_4BPP):
+    def update(
+        self,
+        data: bytes,
+        xy: Tuple[int, int],
+        dims: Tuple[int, int],
+        mode: DisplayModes,
+        pixel_format: Optional[PixelModes] = PixelModes.M_4BPP,
+    ):
 
         # these modes only use two pixels, so use a more dense packing for them
         # TODO: 2BPP doesn't seem to refresh correctly?
@@ -249,7 +269,7 @@ class VirtualEPDDisplay(AutoDisplay):
     EPD, to allow testing without a physical e-paper device
     '''
 
-    def __init__(self, dims=(800,600), **kwargs):
+    def __init__(self, dims: Tuple[int, int] =(800, 600), **kwargs):
         AutoDisplay.__init__(self, dims[0], dims[1], **kwargs)
 
         import tkinter as tk

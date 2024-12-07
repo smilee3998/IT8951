@@ -1,3 +1,4 @@
+from enum import IntEnum
 
 # pin numbers
 class Pins:
@@ -35,7 +36,7 @@ class Rotate:
     FLIP = 2  # 180 degree rotation
 
 # TODO: get rid of these M's
-class PixelModes:
+class PixelModes(IntEnum):
     M_2BPP = 0
     M_3BPP = 1
     M_4BPP = 2
@@ -43,7 +44,7 @@ class PixelModes:
 
 # these waveform modes are described here:
 # http://www.waveshare.net/w/upload/c/c4/E-paper-mode-declaration.pdf
-class DisplayModes:
+class DisplayModes(IntEnum):
     INIT  = 0
     DU    = 1
     GC16  = 2
